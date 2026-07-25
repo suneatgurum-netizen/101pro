@@ -155,6 +155,7 @@
     const { project, currentDay, completedDays, progress, streak, todayDay } = projectMetrics();
     const todayEntry = project.entries[store.today()];
     const goals = project.goals || [];
+    const entriesList = Object.values(project.entries);
     const promptText = prompts[(currentDay - 1) % Math.max(prompts.length, 1)] || '오늘의 이야기를 기록해보세요.';
     const journeyMessage = todayDay < 1
       ? `${Math.abs(todayDay) + 1}일 뒤 여정이 시작돼요.`
@@ -163,25 +164,31 @@
         : `오늘은 여정의 ${currentDay}일째예요.`;
 
     const goalsHtml = goals.length
-      ? `<div class="section-title"><h2>오늘의 수치 목표</h2><button class="text-btn" data-action="fix-goals">🎯 목표 수정</button></div>
+      ? `<div class="section-title"><h2>100일 누적 목표 달성 현황</h2><button class="text-btn" data-action="fix-goals">🎯 목표 수정</button></div>
          <div class="card form-card">
            <div class="goal-progress-grid">
              ${goals.map((g) => {
-               const val = todayEntry?.goals?.[g.id] ?? 0;
-               const percent = g.target > 0 ? Math.min(100, Math.round((val / g.target) * 100)) : 0;
+               const accumulated = entriesList.reduce((sum, e) => sum + Number(e.goals?.[g.id] || 0), 0);
+               const roundedAcc = Math.round(accumulated * 100) / 100;
+               const todayVal = Number(todayEntry?.goals?.[g.id] || 0);
+               const percent = g.target > 0 ? Math.min(100, Math.round((roundedAcc / g.target) * 1000) / 10) : 0;
                return `
                  <div class="goal-progress-card">
                    <div class="goal-progress-head">
                      <strong>${escapeHtml(g.name)}</strong>
-                     <span>${val.toLocaleString()} / ${g.target.toLocaleString()} ${escapeHtml(g.unit)} (${percent}%)</span>
+                     <span>${roundedAcc.toLocaleString()} / ${g.target.toLocaleString()} ${escapeHtml(g.unit)} (<strong>${percent}%</strong>)</span>
                    </div>
                    <div class="goal-progress-bar"><span style="width:${percent}%"></span></div>
+                   <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.75rem; color:var(--muted);">
+                     <span>오늘 기록: +${todayVal.toLocaleString()} ${escapeHtml(g.unit)}</span>
+                     <span>남은 수치: ${Math.max(0, Math.round((g.target - roundedAcc) * 100) / 100).toLocaleString()} ${escapeHtml(g.unit)}</span>
+                   </div>
                  </div>
                `;
              }).join('')}
            </div>
          </div>`
-      : `<div class="section-title"><h2>수치 목표</h2><button class="text-btn" data-action="fix-goals">🎯 목표 추가하기</button></div>`;
+      : `<div class="section-title"><h2>100일 누적 목표</h2><button class="text-btn" data-action="fix-goals">🎯 목표 추가하기</button></div>`;
 
     views.home.innerHTML = `
       <div class="hero">
@@ -223,21 +230,27 @@
     const goals = project.goals || [];
     const goalStatsHtml = goals.length
       ? `
-        <div class="section-title"><h2>수치 목표 평균 & 달성 현황</h2><button class="text-btn" data-action="fix-goals">목표 수정</button></div>
+        <div class="section-title"><h2>100일 목표 누적 달성률 & 바 그래프</h2><button class="text-btn" data-action="fix-goals">목표 수정</button></div>
         <div class="card form-card">
           <div class="goal-progress-grid">
             ${goals.map((g) => {
-              const recordedEntries = entries.filter((e) => e.goals && e.goals[g.id] !== undefined);
-              const totalVal = recordedEntries.reduce((sum, e) => sum + Number(e.goals[g.id] || 0), 0);
-              const avgVal = recordedEntries.length ? Math.round(totalVal / recordedEntries.length) : 0;
-              const achievedDays = recordedEntries.filter((e) => Number(e.goals[g.id] || 0) >= g.target).length;
+              const recordedEntries = entries.filter((e) => e.goals && e.goals[g.id] !== undefined && Number(e.goals[g.id]) > 0);
+              const totalVal = entries.reduce((sum, e) => sum + Number(e.goals?.[g.id] || 0), 0);
+              const roundedTotal = Math.round(totalVal * 100) / 100;
+              const percent = g.target > 0 ? Math.min(100, Math.round((roundedTotal / g.target) * 1000) / 10) : 0;
+              const dailyAvg = completedDays > 0 ? Math.round((roundedTotal / completedDays) * 100) / 100 : 0;
+              const dailyTargetPace = Math.round((g.target / 100) * 100) / 100;
               return `
                 <div class="goal-progress-card">
                   <div class="goal-progress-head">
-                    <strong>${escapeHtml(g.name)} (목표: ${g.target.toLocaleString()} ${escapeHtml(g.unit)})</strong>
-                    <span>달성: ${achievedDays}회</span>
+                    <strong>${escapeHtml(g.name)} (100일 목표: ${g.target.toLocaleString()} ${escapeHtml(g.unit)})</strong>
+                    <span><strong>${percent}%</strong> 달성</span>
                   </div>
-                  <small style="color:var(--muted);">평균 기록: ${avgVal.toLocaleString()} ${escapeHtml(g.unit)} · 총 기록 횟수: ${recordedEntries.length}일</small>
+                  <div class="goal-progress-bar"><span style="width:${percent}%"></span></div>
+                  <div style="margin-top:6px; font-size:0.76rem; color:var(--muted); line-height:1.5;">
+                    <div>• 누적 달성량: <strong>${roundedTotal.toLocaleString()}</strong> / ${g.target.toLocaleString()} ${escapeHtml(g.unit)} (남은 양: ${Math.max(0, Math.round((g.target - roundedTotal) * 100) / 100).toLocaleString()}${escapeHtml(g.unit)})</div>
+                    <div>• 일평균 기록: ${dailyAvg.toLocaleString()} ${escapeHtml(g.unit)} · 권장 일일 목표: ${dailyTargetPace.toLocaleString()} ${escapeHtml(g.unit)} (${recordedEntries.length}일 기록됨)</div>
+                  </div>
                 </div>
               `;
             }).join('')}
@@ -361,15 +374,15 @@
       ? `
         <div class="field" style="margin-bottom:20px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <label style="margin:0;">오늘의 수치 목표 달성 기록</label>
+            <label style="margin:0;">오늘의 달성 수치 기록 (100일 목표 누적)</label>
             <button type="button" class="text-btn" data-action="fix-goals" style="font-size:0.78rem; min-height:auto; padding:0;">🎯 목표 수정</button>
           </div>
           <div class="goals-fields-list">
             ${goals.map((g) => `
               <div class="field" style="margin-bottom:10px;">
-                <small style="font-weight:700; color:var(--text);">${escapeHtml(g.name)} (목표: ${g.target.toLocaleString()}${escapeHtml(g.unit)})</small>
+                <small style="font-weight:700; color:var(--text);">${escapeHtml(g.name)} (100일 총 목표: ${g.target.toLocaleString()}${escapeHtml(g.unit)})</small>
                 <div class="input-with-badge">
-                  <input type="number" min="0" step="any" inputmode="numeric" name="goal_${g.id}" id="goal-input-${g.id}" placeholder="오늘 달성 수치 (예: ${g.target})" value="${sourceGoals[g.id] !== undefined ? sourceGoals[g.id] : ''}">
+                  <input type="number" min="0" step="any" inputmode="decimal" name="goal_${g.id}" id="goal-input-${g.id}" placeholder="오늘 달성량 (예: 5.5)" value="${sourceGoals[g.id] !== undefined ? sourceGoals[g.id] : ''}">
                   <span class="input-unit-tag">${escapeHtml(g.unit)}</span>
                 </div>
               </div>
@@ -379,7 +392,7 @@
       `
       : `
         <div class="field" style="margin-bottom:16px;">
-          <button type="button" class="btn btn-secondary btn-block" data-action="fix-goals">🎯 수치 목표 설정하기 (최대 6개)</button>
+          <button type="button" class="btn btn-secondary btn-block" data-action="fix-goals">🎯 100일 누적 목표 설정하기 (최대 6개)</button>
         </div>
       `;
 
@@ -1159,18 +1172,18 @@
     if (!container) return;
 
     if (!activeGoalsDraft.length) {
-      container.innerHTML = '<p style="color:var(--muted); text-align:center; padding:12px 0;">아직 추가된 수치 목표가 없습니다. 아래 버튼을 눌러 목표를 만드세요.</p>';
+      container.innerHTML = '<p style="color:var(--muted); text-align:center; padding:12px 0;">아직 추가된 100일 목표가 없습니다. 아래 버튼을 눌러 목표를 만드세요.</p>';
     } else {
       container.innerHTML = activeGoalsDraft.map((g, idx) => `
         <div class="goal-field-item" data-index="${idx}">
           <div class="goal-field-head">
-            <strong>목표 ${idx + 1}</strong>
+            <strong>100일 목표 ${idx + 1}</strong>
             <button type="button" class="remove-goal-btn" data-action="remove-goal-field" data-index="${idx}">삭제</button>
           </div>
           <div class="goal-field-inputs">
-            <input type="text" maxlength="40" placeholder="목표 이름 (예: 물 마시기)" value="${escapeHtml(g.name)}" data-field="name" data-index="${idx}" required>
-            <input type="number" min="1" step="any" placeholder="수치 (2000)" value="${g.target || ''}" data-field="target" data-index="${idx}" required>
-            <input type="text" maxlength="10" placeholder="단위 (ml)" value="${escapeHtml(g.unit || '')}" data-field="unit" data-index="${idx}" required>
+            <input type="text" maxlength="40" placeholder="목표 이름 (예: 러닝)" value="${escapeHtml(g.name)}" data-field="name" data-index="${idx}" required>
+            <input type="number" min="0.01" step="any" placeholder="100일 총 목표 (600)" value="${g.target || ''}" data-field="target" data-index="${idx}" required>
+            <input type="text" maxlength="10" placeholder="단위 (KM)" value="${escapeHtml(g.unit || '')}" data-field="unit" data-index="${idx}" required>
           </div>
         </div>
       `).join('');

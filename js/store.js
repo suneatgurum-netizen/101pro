@@ -57,8 +57,10 @@
           startDate: today,
           createdAt: new Date().toISOString(),
           goals: [
-            { id: 'goal-1', name: '물 마시기', target: 2000, unit: 'ml' },
-            { id: 'goal-2', name: '오늘의 걸음 수', target: 10000, unit: '보' }
+            { id: 'goal-1', name: '러닝', target: 600, unit: 'KM' },
+            { id: 'goal-2', name: '독서', target: 30, unit: '권' },
+            { id: 'goal-3', name: '소설 쓰기', target: 600, unit: 'PAGE' },
+            { id: 'goal-4', name: '체중 감량', target: 10, unit: 'kg' }
           ],
           entries: {}
         }
@@ -128,8 +130,10 @@
           const goals = rawGoals
             ? rawGoals.map(normalizeGoal).filter((g) => g.name).slice(0, 6)
             : [
-                { id: 'goal-1', name: '물 마시기', target: 2000, unit: 'ml' },
-                { id: 'goal-2', name: '오늘의 걸음 수', target: 10000, unit: '보' }
+                { id: 'goal-1', name: '러닝', target: 600, unit: 'KM' },
+                { id: 'goal-2', name: '독서', target: 30, unit: '권' },
+                { id: 'goal-3', name: '소설 쓰기', target: 600, unit: 'PAGE' },
+                { id: 'goal-4', name: '체중 감량', target: 10, unit: 'kg' }
               ];
           return {
             id: String(project.id || `project-${index + 1}`),
