@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="forest">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>100일 여정 다이어리</title>
+  <meta name="description" content="사진과 감정을 휴대폰에 안전하게 저장하는 오프라인 100일 다이어리">
+  <meta name="theme-color" content="#3A4D39">
+  <meta name="color-scheme" content="light dark">
+  <meta name="format-detection" content="telephone=no">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="100일 다이어리">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <noscript><div class="fatal-error"><h1>JavaScript가 필요합니다.</h1><p>브라우저 설정에서 JavaScript를 활성화해 주세요.</p></div></noscript>
+
+  <div id="boot-screen" class="boot-screen" aria-live="polite">
+    <img src="assets/icon-192.png" alt="">
+    <strong>CENTUM</strong>
+    <span>휴대폰 기록을 불러오는 중…</span>
+  </div>
+
+  <div id="privacy-shield" class="privacy-shield" aria-hidden="true">
+    <div>🔒</div>
+    <strong>나의 기록</strong>
+    <span>앱으로 돌아가면 다시 표시됩니다.</span>
+  </div>
+
+  <div id="app-container">
+    <header class="app-header">
+      <button type="button" class="header-icon-btn" id="header-menu-btn" aria-label="설정 열기">☰</button>
+      <div class="brand-block">
+        <div class="brand-logo">CENTUM</div>
+        <span id="network-status" class="network-status">온라인</span>
+      </div>
+      <button type="button" class="header-icon-btn" id="header-user-btn" aria-label="통계 열기">👤</button>
+    </header>
+
+    <aside id="update-banner" class="update-banner" role="status" aria-live="polite">
+      <div><strong>새 버전이 준비되었습니다.</strong><span>휴대폰 기록은 그대로 유지됩니다.</span></div>
+      <div class="update-actions">
+        <button type="button" id="update-later-btn">나중에</button>
+        <button type="button" id="update-now-btn">지금 업데이트</button>
+      </div>
+    </aside>
+
+    <main class="view-container">
+      <section id="view-home" class="view-page active" aria-label="홈"></section>
+      <section id="view-stats" class="view-page" aria-label="통계"></section>
+      <section id="view-completion" class="view-page" aria-label="완주 인증서"></section>
+      <section id="view-calendar" class="view-page" aria-label="100일 히스토리"></section>
+      <section id="view-editor" class="view-page" aria-label="일기 작성"></section>
+      <section id="view-memories" class="view-page" aria-label="기억 검색"></section>
+      <section id="view-settings" class="view-page" aria-label="설정"></section>
+      <section id="view-onboarding" class="view-page" aria-label="시작 안내"></section>
+      <section id="view-create" class="view-page" aria-label="새 여정 만들기"></section>
+    </main>
+
+    <button type="button" class="fab-write-btn" id="fab-write-btn" aria-label="오늘의 일기 쓰기">✏️</button>
+
+    <nav class="bottom-nav" aria-label="주요 메뉴">
+      <button type="button" class="nav-item active" data-view="home" aria-label="홈"><span class="nav-icon">🏠</span><span>홈</span></button>
+      <button type="button" class="nav-item" data-view="stats" aria-label="통계"><span class="nav-icon">📈</span><span>통계</span></button>
+      <button type="button" class="nav-item" data-view="calendar" aria-label="히스토리"><span class="nav-icon">📅</span><span>히스토리</span></button>
+      <button type="button" class="nav-item" data-view="settings" aria-label="설정"><span class="nav-icon">⚙️</span><span>설정</span></button>
+    </nav>
+
+    <div id="pin-lock-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <div class="modal-content pin-modal">
+        <div class="lock-icon">🔐</div>
+        <div id="pin-title" class="modal-title">보안 잠금</div>
+        <p>4자리 PIN을 입력해 주세요.</p>
+        <div class="pin-dots" aria-hidden="true"><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div></div>
+        <div class="pin-pad">
+          <button type="button" class="pin-key" data-key="1">1</button><button type="button" class="pin-key" data-key="2">2</button><button type="button" class="pin-key" data-key="3">3</button>
+          <button type="button" class="pin-key" data-key="4">4</button><button type="button" class="pin-key" data-key="5">5</button><button type="button" class="pin-key" data-key="6">6</button>
+          <button type="button" class="pin-key" data-key="7">7</button><button type="button" class="pin-key" data-key="8">8</button><button type="button" class="pin-key" data-key="9">9</button>
+          <button type="button" class="pin-key small" data-key="clear">지움</button><button type="button" class="pin-key" data-key="0">0</button><button type="button" class="pin-key small" data-key="confirm">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>window.CENTUM_VERSION = '3.0.0';</script>
+  <script src="js/prompts.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

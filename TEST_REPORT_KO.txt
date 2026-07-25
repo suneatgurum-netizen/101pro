@@ -1,0 +1,14 @@
+Centum 100일 여정 다이어리 v3.0.0 검증 보고서
+
+통과 항목
+- JavaScript 문법 검사: prompts.js, store.js, app.js, sw.js
+- JSON 유효성 검사: manifest.json, version.json
+- index.html 및 서비스 워커 참조 파일 존재 여부
+- PWA 일반 아이콘, 마스커블 아이콘, Apple Touch 아이콘 구성
+- IndexedDB 중심 저장 및 localStorage 대체 저장 코드 확인
+- 서비스 워커 버전 캐시와 사용자 데이터 저장소 분리
+- 자동 임시저장, 백업/복원, 복구 지점, PIN 해시 코드 포함
+
+환경 제한
+- 이 작업 환경의 Chromium이 로컬 주소와 file:// 주소를 조직 정책으로 차단하여 실제 브라우저 자동화 테스트는 수행하지 못했습니다.
+- 따라서 휴대폰 배포 전 HTTPS 테스트 주소에서 설치, 저장, 재실행, 오프라인 실행을 한 번 확인하는 것이 필요합니다.
