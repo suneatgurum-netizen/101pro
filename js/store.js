@@ -56,6 +56,10 @@
           description: '하루 한 편, 나를 위한 기록',
           startDate: today,
           createdAt: new Date().toISOString(),
+          goals: [
+            { id: 'goal-1', name: '물 마시기', target: 2000, unit: 'ml' },
+            { id: 'goal-2', name: '오늘의 걸음 수', target: 10000, unit: '보' }
+          ],
           entries: {}
         }
       ],
@@ -68,8 +72,25 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function normalizeGoal(goal, index) {
+    const safe = goal && typeof goal === 'object' ? goal : {};
+    return {
+      id: String(safe.id || `goal-${index + 1}`),
+      name: String(safe.name || '').trim().slice(0, 40),
+      target: Math.max(0, Number(safe.target || 0)),
+      unit: String(safe.unit || '').trim().slice(0, 10)
+    };
+  }
+
   function normalizeEntry(entry) {
     const safe = entry && typeof entry === 'object' ? entry : {};
+    const rawGoals = safe.goals && typeof safe.goals === 'object' ? safe.goals : {};
+    const goals = {};
+    Object.entries(rawGoals).forEach(([gId, val]) => {
+      const num = Number(val);
+      if (!isNaN(num) && num >= 0) goals[gId] = num;
+    });
+
     return {
       title: String(safe.title || '').slice(0, 120),
       content: String(safe.content || ''),
@@ -77,6 +98,7 @@
       tags: Array.isArray(safe.tags)
         ? safe.tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 10)
         : [],
+      goals,
       photo: safe.photo && typeof safe.photo === 'object' && typeof safe.photo.dataUrl === 'string'
         ? {
             dataUrl: safe.photo.dataUrl,
@@ -102,12 +124,20 @@
           Object.entries(project.entries && typeof project.entries === 'object' ? project.entries : {}).forEach(([date, entry]) => {
             if (/^\d{4}-\d{2}-\d{2}$/.test(date)) entries[date] = normalizeEntry(entry);
           });
+          const rawGoals = Array.isArray(project.goals) ? project.goals : null;
+          const goals = rawGoals
+            ? rawGoals.map(normalizeGoal).filter((g) => g.name).slice(0, 6)
+            : [
+                { id: 'goal-1', name: '물 마시기', target: 2000, unit: 'ml' },
+                { id: 'goal-2', name: '오늘의 걸음 수', target: 10000, unit: '보' }
+              ];
           return {
             id: String(project.id || `project-${index + 1}`),
             title: String(project.title || '나의 100일 여정').slice(0, 80),
             description: String(project.description || '').slice(0, 500),
             startDate: /^\d{4}-\d{2}-\d{2}$/.test(project.startDate || '') ? project.startDate : formatDate(),
             createdAt: project.createdAt || new Date().toISOString(),
+            goals,
             entries
           };
         })
@@ -438,6 +468,16 @@
       if (patch.startDate && /^\d{4}-\d{2}-\d{2}$/.test(patch.startDate)) project.startDate = patch.startDate;
       schedulePersist({ reason: 'project-updated' });
     },
+    updateProjectGoals(newGoals) {
+      const project = activeProject();
+      const sanitized = (Array.isArray(newGoals) ? newGoals : [])
+        .map(normalizeGoal)
+        .filter((g) => g.name)
+        .slice(0, 6);
+      project.goals = sanitized;
+      schedulePersist({ reason: 'goals-updated' });
+      return project.goals;
+    },
     deleteProject(id) {
       if (state.projects.length <= 1) throw new Error('최소 한 개의 여정은 필요합니다.');
       const index = state.projects.findIndex((project) => project.id === id);
@@ -475,6 +515,7 @@
         content: String(draft.content || ''),
         mood: draft.mood || 'calm',
         tags: Array.isArray(draft.tags) ? draft.tags : [],
+        goals: draft.goals && typeof draft.goals === 'object' ? draft.goals : {},
         photo: draft.photo || null,
         updatedAt: new Date().toISOString()
       };

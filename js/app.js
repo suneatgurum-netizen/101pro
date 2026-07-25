@@ -19,6 +19,7 @@
   let lastHiddenAt = 0;
   let appLocked = false;
   let isVerifyingPin = false;
+  let activeGoalsDraft = [];
 
   const moodMap = {
     happy: { icon: '😄', label: '행복' },
@@ -153,12 +154,34 @@
   function renderHome() {
     const { project, currentDay, completedDays, progress, streak, todayDay } = projectMetrics();
     const todayEntry = project.entries[store.today()];
+    const goals = project.goals || [];
     const promptText = prompts[(currentDay - 1) % Math.max(prompts.length, 1)] || '오늘의 이야기를 기록해보세요.';
     const journeyMessage = todayDay < 1
       ? `${Math.abs(todayDay) + 1}일 뒤 여정이 시작돼요.`
       : todayDay > 100
         ? '100일 여정을 완주했어요!'
         : `오늘은 여정의 ${currentDay}일째예요.`;
+
+    const goalsHtml = goals.length
+      ? `<div class="section-title"><h2>오늘의 수치 목표</h2><button class="text-btn" data-action="fix-goals">🎯 목표 수정</button></div>
+         <div class="card form-card">
+           <div class="goal-progress-grid">
+             ${goals.map((g) => {
+               const val = todayEntry?.goals?.[g.id] ?? 0;
+               const percent = g.target > 0 ? Math.min(100, Math.round((val / g.target) * 100)) : 0;
+               return `
+                 <div class="goal-progress-card">
+                   <div class="goal-progress-head">
+                     <strong>${escapeHtml(g.name)}</strong>
+                     <span>${val.toLocaleString()} / ${g.target.toLocaleString()} ${escapeHtml(g.unit)} (${percent}%)</span>
+                   </div>
+                   <div class="goal-progress-bar"><span style="width:${percent}%"></span></div>
+                 </div>
+               `;
+             }).join('')}
+           </div>
+         </div>`
+      : `<div class="section-title"><h2>수치 목표</h2><button class="text-btn" data-action="fix-goals">🎯 목표 추가하기</button></div>`;
 
     views.home.innerHTML = `
       <div class="hero">
@@ -168,6 +191,8 @@
         <div class="progress-row"><span>${journeyMessage}</span><strong>${completedDays}/100</strong></div>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>
       </div>
+
+      ${goalsHtml}
 
       <div class="section-title"><h2>오늘의 질문</h2><button class="text-btn" data-action="new-prompt">다른 질문</button></div>
       <div class="card prompt-card">
@@ -181,7 +206,7 @@
         <button class="card quick-card" data-view-target="calendar"><span class="icon">🗓️</span><strong>100일 히스토리</strong><small>기록한 날을 한눈에 확인해요.</small></button>
         <button class="card quick-card" data-view-target="stats"><span class="icon">🔥</span><strong>${streak}일 연속 기록</strong><small>꾸준한 흐름을 확인해요.</small></button>
         <button class="card quick-card" data-view-target="memories"><span class="icon">🔎</span><strong>기억 검색</strong><small>제목, 내용, 태그로 찾아보세요.</small></button>
-        <button class="card quick-card" data-action="new-project"><span class="icon">🌱</span><strong>새 여정 만들기</strong><small>새로운 100일을 시작해요.</small></button>
+        <button class="card quick-card" data-action="fix-goals"><span class="icon">🎯</span><strong>수치 목표 수정</strong><small>최대 6개 목표 관리하기</small></button>
       </div>
     `;
   }
@@ -195,6 +220,32 @@
     const wordCount = entries.reduce((sum, entry) => sum + String(entry.content || '').trim().split(/\s+/).filter(Boolean).length, 0);
     const photoCount = entries.filter((entry) => entry.photo?.dataUrl).length;
 
+    const goals = project.goals || [];
+    const goalStatsHtml = goals.length
+      ? `
+        <div class="section-title"><h2>수치 목표 평균 & 달성 현황</h2><button class="text-btn" data-action="fix-goals">목표 수정</button></div>
+        <div class="card form-card">
+          <div class="goal-progress-grid">
+            ${goals.map((g) => {
+              const recordedEntries = entries.filter((e) => e.goals && e.goals[g.id] !== undefined);
+              const totalVal = recordedEntries.reduce((sum, e) => sum + Number(e.goals[g.id] || 0), 0);
+              const avgVal = recordedEntries.length ? Math.round(totalVal / recordedEntries.length) : 0;
+              const achievedDays = recordedEntries.filter((e) => Number(e.goals[g.id] || 0) >= g.target).length;
+              return `
+                <div class="goal-progress-card">
+                  <div class="goal-progress-head">
+                    <strong>${escapeHtml(g.name)} (목표: ${g.target.toLocaleString()} ${escapeHtml(g.unit)})</strong>
+                    <span>달성: ${achievedDays}회</span>
+                  </div>
+                  <small style="color:var(--muted);">평균 기록: ${avgVal.toLocaleString()} ${escapeHtml(g.unit)} · 총 기록 횟수: ${recordedEntries.length}일</small>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
     views.stats.innerHTML = `
       <div class="section-title first"><h2>나의 기록 통계</h2></div>
       <div class="stat-grid">
@@ -204,6 +255,7 @@
         <div class="card stat-card"><div class="stat-value">${Math.max(0, 100 - completedDays)}</div><div class="stat-label">남은 기록</div></div>
       </div>
       <div class="card summary-strip"><span>✍️ ${wordCount.toLocaleString()}단어</span><span>📷 사진 ${photoCount}장</span></div>
+      ${goalStatsHtml}
       <div class="section-title"><h2>감정 분포</h2></div>
       <div class="card form-card mood-list">
         ${Object.entries(moodMap).map(([key, mood]) => `
@@ -261,9 +313,19 @@
       const day = store.dayNumber(date, project);
       const tags = (entry.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
       const photo = entry.photo?.dataUrl ? `<img class="entry-thumb" src="${entry.photo.dataUrl}" alt="">` : '';
+      const goalBadges = (project.goals || [])
+        .filter((g) => entry.goals && entry.goals[g.id] !== undefined && entry.goals[g.id] > 0)
+        .map((g) => `<span class="entry-goal-badge">🎯 ${escapeHtml(g.name)} ${Number(entry.goals[g.id]).toLocaleString()}${escapeHtml(g.unit)}</span>`)
+        .join('');
+
       return `<button class="card entry-item ${photo ? 'has-photo' : ''}" data-date="${date}">
         <div class="entry-day">${day}</div>
-        <div class="entry-copy"><h3>${moodMap[entry.mood]?.icon || '😌'} ${escapeHtml(entry.title || formatKoreanDate(date))}</h3><p>${escapeHtml(entry.content)}</p>${tags ? `<div class="tag-row">${tags}</div>` : ''}</div>
+        <div class="entry-copy">
+          <h3>${moodMap[entry.mood]?.icon || '😌'} ${escapeHtml(entry.title || formatKoreanDate(date))}</h3>
+          <p>${escapeHtml(entry.content)}</p>
+          ${goalBadges ? `<div class="entry-goals-row">${goalBadges}</div>` : ''}
+          ${tags ? `<div class="tag-row">${tags}</div>` : ''}
+        </div>
         ${photo}<span class="chevron">›</span>
       </button>`;
     }).join('')}</div>`;
@@ -292,6 +354,34 @@
     const day = store.dayNumber(editorDate, project);
     const tags = Array.isArray(source.tags) ? source.tags.join(', ') : '';
     const outsideJourney = day < 1 || day > 100;
+    const goals = project.goals || [];
+    const sourceGoals = source.goals || {};
+
+    const goalsFieldsHtml = goals.length
+      ? `
+        <div class="field" style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="margin:0;">오늘의 수치 목표 달성 기록</label>
+            <button type="button" class="text-btn" data-action="fix-goals" style="font-size:0.78rem; min-height:auto; padding:0;">🎯 목표 수정</button>
+          </div>
+          <div class="goals-fields-list">
+            ${goals.map((g) => `
+              <div class="field" style="margin-bottom:10px;">
+                <small style="font-weight:700; color:var(--text);">${escapeHtml(g.name)} (목표: ${g.target.toLocaleString()}${escapeHtml(g.unit)})</small>
+                <div class="input-with-badge">
+                  <input type="number" min="0" step="any" inputmode="numeric" name="goal_${g.id}" id="goal-input-${g.id}" placeholder="오늘 달성 수치 (예: ${g.target})" value="${sourceGoals[g.id] !== undefined ? sourceGoals[g.id] : ''}">
+                  <span class="input-unit-tag">${escapeHtml(g.unit)}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : `
+        <div class="field" style="margin-bottom:16px;">
+          <button type="button" class="btn btn-secondary btn-block" data-action="fix-goals">🎯 수치 목표 설정하기 (최대 6개)</button>
+        </div>
+      `;
 
     views.editor.innerHTML = `
       <div class="section-title first"><div><p class="eyebrow accent-text">DAY ${day}</p><h2>${formatKoreanDate(editorDate)}</h2></div><button class="text-btn" data-action="close-editor">닫기</button></div>
@@ -301,6 +391,7 @@
         <input type="hidden" name="date" value="${editorDate}">
         <div class="field"><label for="entry-title">제목</label><input id="entry-title" name="title" maxlength="120" placeholder="오늘을 한 문장으로 남겨보세요" value="${escapeHtml(source.title || '')}"></div>
         <div class="field"><label>오늘의 기분</label><div class="mood-picker">${Object.entries(moodMap).map(([key, mood]) => `<button type="button" class="mood-choice ${selectedMood === key ? 'active' : ''}" data-mood="${key}" aria-label="${mood.label}" title="${mood.label}">${mood.icon}</button>`).join('')}</div></div>
+        ${goalsFieldsHtml}
         <div class="field"><label for="entry-content">오늘의 기록</label><textarea id="entry-content" name="content" maxlength="30000" placeholder="서두르지 말고 오늘의 마음을 기록해보세요.">${escapeHtml(source.content || '')}</textarea><div class="field-foot"><span id="autosave-status">자동 저장 준비됨</span><span id="content-count">${String(source.content || '').length.toLocaleString()}자</span></div></div>
         <div class="field"><label for="entry-tags">태그</label><input id="entry-tags" name="tags" maxlength="160" placeholder="예: 가족, 산책, 감사" value="${escapeHtml(tags)}"><small>쉼표로 구분하며 최대 10개까지 저장됩니다.</small></div>
         <div class="field"><label>사진 한 장</label>
@@ -337,6 +428,7 @@
         <div class="field"><label for="settings-project-description">소개</label><textarea id="settings-project-description" name="description" maxlength="500">${escapeHtml(project.description || '')}</textarea></div>
         <div class="field"><label for="settings-project-start">시작일</label><input id="settings-project-start" name="startDate" type="date" required value="${project.startDate}"></div>
         <button class="btn btn-secondary btn-block" type="submit">여정 정보 저장</button>
+        <button type="button" class="btn btn-primary btn-block top-gap-sm" data-action="fix-goals">🎯 수치 목표 수정 (최대 6개)</button>
       </form>
 
       <div class="section-title"><h2>휴대폰 저장 공간</h2></div>
@@ -481,6 +573,13 @@
     if (!actionTarget || actionTarget.disabled) return;
     const action = actionTarget.dataset.action;
 
+    if (action === 'fix-goals') openGoalsModal();
+    if (action === 'close-goals-modal') closeGoalsModal();
+    if (action === 'add-goal-field') addGoalField();
+    if (action === 'remove-goal-field') {
+      const idx = Number(actionTarget.dataset.index);
+      removeGoalField(idx);
+    }
     if (action === 'write-today') openEditor(store.today());
     if (action === 'new-project') navigate('create');
     if (action === 'close-editor') closeEditor();
@@ -532,12 +631,20 @@
       input?.focus();
       input?.setSelectionRange(memorySearch.length, memorySearch.length);
     }
-    if (['entry-title', 'entry-content', 'entry-tags'].includes(event.target.id)) {
+    if (['entry-title', 'entry-content', 'entry-tags'].includes(event.target.id) || event.target.name?.startsWith('goal_')) {
       if (event.target.id === 'entry-content') {
         const counter = document.getElementById('content-count');
         if (counter) counter.textContent = `${event.target.value.length.toLocaleString()}자`;
       }
       saveEditorDraft();
+    }
+    if (event.target.dataset.field && event.target.closest('#goals-form')) {
+      const idx = Number(event.target.dataset.index);
+      const field = event.target.dataset.field;
+      if (activeGoalsDraft[idx]) {
+        if (field === 'target') activeGoalsDraft[idx].target = Number(event.target.value) || 0;
+        else activeGoalsDraft[idx][field] = event.target.value;
+      }
     }
   }
 
@@ -560,16 +667,39 @@
       event.preventDefault();
       const data = new FormData(event.target);
       const tags = String(data.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 10);
+      const goalsData = {};
+      (store.getProject().goals || []).forEach((g) => {
+        const val = data.get(`goal_${g.id}`);
+        if (val !== null && val !== '' && !isNaN(Number(val))) {
+          goalsData[g.id] = Number(val);
+        }
+      });
       store.saveEntry(data.get('date'), {
         title: data.get('title'),
         content: data.get('content'),
         mood: selectedMood,
         tags,
+        goals: goalsData,
         photo: editorPhoto
       });
       await store.flush();
       showToast('오늘의 기록을 휴대폰에 저장했습니다.');
       navigate('home');
+    }
+    if (event.target.id === 'goals-form') {
+      event.preventDefault();
+      const updated = activeGoalsDraft
+        .filter((g) => String(g.name || '').trim() && Number(g.target || 0) > 0)
+        .map((g, idx) => ({
+          id: g.id || `goal-${idx + 1}`,
+          name: String(g.name).trim().slice(0, 40),
+          target: Number(g.target),
+          unit: String(g.unit || '').trim().slice(0, 10) || '회'
+        }));
+      store.updateProjectGoals(updated);
+      closeGoalsModal();
+      showToast('수치 목표를 저장했습니다.');
+      renderAll();
     }
     if (event.target.id === 'project-form') {
       event.preventDefault();
@@ -599,7 +729,14 @@
     const tagsInput = document.getElementById('entry-tags');
     if (!title || !content || !tagsInput) return;
     const tags = tagsInput.value.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 10);
-    store.saveDraft(editorDate, { title: title.value, content: content.value, mood: selectedMood, tags, photo: editorPhoto });
+    const goalsData = {};
+    (store.getProject().goals || []).forEach((g) => {
+      const input = document.getElementById(`goal-input-${g.id}`);
+      if (input && input.value !== '' && !isNaN(Number(input.value))) {
+        goalsData[g.id] = Number(input.value);
+      }
+    });
+    store.saveDraft(editorDate, { title: title.value, content: content.value, mood: selectedMood, tags, goals: goalsData, photo: editorPhoto });
     const status = document.getElementById('autosave-status');
     if (status) {
       status.textContent = '휴대폰에 임시 저장됨';
@@ -989,6 +1126,57 @@
     alert(isIos
       ? 'Safari 하단의 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택하세요.'
       : '브라우저 메뉴에서 “앱 설치” 또는 “홈 화면에 추가”를 선택하세요.');
+  }
+
+  function openGoalsModal() {
+    const project = store.getProject();
+    activeGoalsDraft = JSON.parse(JSON.stringify(project.goals || []));
+    renderGoalsModalFields();
+    document.getElementById('goals-modal').classList.add('open');
+  }
+
+  function closeGoalsModal() {
+    document.getElementById('goals-modal').classList.remove('open');
+  }
+
+  function addGoalField() {
+    if (activeGoalsDraft.length >= 6) {
+      showToast('목표는 최대 6개까지 설정할 수 있습니다.');
+      return;
+    }
+    activeGoalsDraft.push({ id: `goal-${Date.now()}`, name: '', target: 100, unit: '회' });
+    renderGoalsModalFields();
+  }
+
+  function removeGoalField(index) {
+    activeGoalsDraft.splice(index, 1);
+    renderGoalsModalFields();
+  }
+
+  function renderGoalsModalFields() {
+    const container = document.getElementById('goals-fields-container');
+    const addBtn = document.getElementById('add-goal-btn');
+    if (!container) return;
+
+    if (!activeGoalsDraft.length) {
+      container.innerHTML = '<p style="color:var(--muted); text-align:center; padding:12px 0;">아직 추가된 수치 목표가 없습니다. 아래 버튼을 눌러 목표를 만드세요.</p>';
+    } else {
+      container.innerHTML = activeGoalsDraft.map((g, idx) => `
+        <div class="goal-field-item" data-index="${idx}">
+          <div class="goal-field-head">
+            <strong>목표 ${idx + 1}</strong>
+            <button type="button" class="remove-goal-btn" data-action="remove-goal-field" data-index="${idx}">삭제</button>
+          </div>
+          <div class="goal-field-inputs">
+            <input type="text" maxlength="40" placeholder="목표 이름 (예: 물 마시기)" value="${escapeHtml(g.name)}" data-field="name" data-index="${idx}" required>
+            <input type="number" min="1" step="any" placeholder="수치 (2000)" value="${g.target || ''}" data-field="target" data-index="${idx}" required>
+            <input type="text" maxlength="10" placeholder="단위 (ml)" value="${escapeHtml(g.unit || '')}" data-field="unit" data-index="${idx}" required>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    if (addBtn) addBtn.style.display = activeGoalsDraft.length >= 6 ? 'none' : 'block';
   }
 
   function showToast(message, duration = 2200) {
