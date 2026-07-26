@@ -3,7 +3,7 @@
 
   const store = window.CentumStore;
   const prompts = window.DIARY_PROMPTS || [];
-  const APP_VERSION = window.CENTUM_VERSION || '3.0.0';
+  const APP_VERSION = window.CENTUM_VERSION || '3.0.1';
   const views = {};
 
   let currentView = 'home';
@@ -1269,9 +1269,11 @@
 
     if (imgEl) {
       const fileName = String(validDay).padStart(3, '0') + '.png';
-      imgEl.src = `navi_img/${fileName}`;
+      imgEl.onerror = null;
+      imgEl.src = `./navi_img/${fileName}`;
       imgEl.onerror = () => {
-        imgEl.src = 'assets/growth-grid.png';
+        imgEl.onerror = null;
+        imgEl.src = `./assets/growth-cells/cell-${validDay}.jpg`;
       };
     }
 
