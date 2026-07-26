@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = window.CENTUM_VERSION || '3.0.1';
+  const APP_VERSION = window.CENTUM_VERSION || '3.0.2';
   const DB_NAME = 'centum-diary-db';
   const DB_VERSION = 1;
   const STATE_STORE = 'state';

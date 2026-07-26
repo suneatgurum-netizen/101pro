@@ -3,7 +3,7 @@
 
   const store = window.CentumStore;
   const prompts = window.DIARY_PROMPTS || [];
-  const APP_VERSION = window.CENTUM_VERSION || '3.0.1';
+  const APP_VERSION = window.CENTUM_VERSION || '3.0.2';
   const views = {};
 
   let currentView = 'home';
@@ -370,7 +370,15 @@
     const project = store.getProject();
     const { entry, draft, source } = editorSource();
     selectedMood = source.mood || selectedMood || 'calm';
-    editorPhoto = source.photo || null;
+    
+    if (!Array.isArray(editorPhotos)) editorPhotos = [];
+    if (editorPhotos.length === 0 && (source.photos || source.photo)) {
+      const rawPhotos = Array.isArray(source.photos) && source.photos.length
+        ? source.photos
+        : (source.photo?.dataUrl ? [source.photo] : []);
+      editorPhotos = rawPhotos.filter(p => p && p.dataUrl);
+    }
+
     const day = store.dayNumber(editorDate, project);
     const tags = Array.isArray(source.tags) ? source.tags.join(', ') : '';
     const outsideJourney = day < 1 || day > 100;
@@ -385,15 +393,19 @@
             <button type="button" class="text-btn" data-action="fix-goals" style="font-size:0.78rem; min-height:auto; padding:0;">🎯 목표 수정</button>
           </div>
           <div class="goals-fields-list">
-            ${goals.map((g) => `
+            ${goals.map((g) => {
+              const targetVal = Number(g.target || 0);
+              const targetStr = isNaN(targetVal) ? '0' : targetVal.toLocaleString();
+              return `
               <div class="field" style="margin-bottom:10px;">
-                <small style="font-weight:700; color:var(--text);">${escapeHtml(g.name)} (100일 총 목표: ${g.target.toLocaleString()}${escapeHtml(g.unit)})</small>
+                <small style="font-weight:700; color:var(--text);">${escapeHtml(g.name)} (100일 총 목표: ${targetStr}${escapeHtml(g.unit || '')})</small>
                 <div class="input-with-badge">
                   <input type="number" min="0" step="any" inputmode="decimal" name="goal_${g.id}" id="goal-input-${g.id}" placeholder="오늘 달성량 (예: 5.5)" value="${sourceGoals[g.id] !== undefined ? sourceGoals[g.id] : ''}">
-                  <span class="input-unit-tag">${escapeHtml(g.unit)}</span>
+                  <span class="input-unit-tag">${escapeHtml(g.unit || '')}</span>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       `
@@ -403,19 +415,20 @@
         </div>
       `;
 
-    const photosGridHtml = editorPhotos.length
+    const validPhotos = editorPhotos.filter((p) => p && typeof p === 'object' && typeof p.dataUrl === 'string');
+    const photosGridHtml = validPhotos.length
       ? `<div class="photo-grid-editor">
-          ${editorPhotos.map((p, idx) => `
+          ${validPhotos.map((p, idx) => `
             <div class="photo-item-editor">
               <img src="${p.dataUrl}" alt="인증 ${idx + 1}">
               <span class="photo-badge">인증 ${idx + 1}</span>
               <button type="button" class="photo-item-remove" data-action="remove-photo-at" data-index="${idx}" aria-label="사진 삭제">×</button>
             </div>
           `).join('')}
-          ${editorPhotos.length < 6 ? `
+          ${validPhotos.length < 6 ? `
             <label class="photo-upload-box">
               <span>＋ 사진 추가</span>
-              <small>(${editorPhotos.length}/6)</small>
+              <small>(${validPhotos.length}/6)</small>
               <input id="entry-photo-input" type="file" accept="image/*" multiple hidden>
             </label>
           ` : ''}
