@@ -93,6 +93,28 @@
       if (!isNaN(num) && num >= 0) goals[gId] = num;
     });
 
+    let photos = [];
+    if (Array.isArray(safe.photos)) {
+      photos = safe.photos
+        .map((p) => (p && typeof p === 'object' && typeof p.dataUrl === 'string' ? {
+          dataUrl: p.dataUrl,
+          name: String(p.name || 'photo.jpg'),
+          type: String(p.type || 'image/jpeg'),
+          width: Number(p.width || 0),
+          height: Number(p.height || 0)
+        } : null))
+        .filter(Boolean)
+        .slice(0, 6);
+    } else if (safe.photo && typeof safe.photo === 'object' && typeof safe.photo.dataUrl === 'string') {
+      photos = [{
+        dataUrl: safe.photo.dataUrl,
+        name: String(safe.photo.name || 'photo.jpg'),
+        type: String(safe.photo.type || 'image/jpeg'),
+        width: Number(safe.photo.width || 0),
+        height: Number(safe.photo.height || 0)
+      }];
+    }
+
     return {
       title: String(safe.title || '').slice(0, 120),
       content: String(safe.content || ''),
@@ -101,15 +123,8 @@
         ? safe.tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 10)
         : [],
       goals,
-      photo: safe.photo && typeof safe.photo === 'object' && typeof safe.photo.dataUrl === 'string'
-        ? {
-            dataUrl: safe.photo.dataUrl,
-            name: String(safe.photo.name || 'photo.jpg'),
-            type: String(safe.photo.type || 'image/jpeg'),
-            width: Number(safe.photo.width || 0),
-            height: Number(safe.photo.height || 0)
-          }
-        : null,
+      photo: photos[0] || null,
+      photos,
       createdAt: safe.createdAt || safe.updatedAt || new Date().toISOString(),
       updatedAt: safe.updatedAt || new Date().toISOString()
     };
@@ -514,13 +529,15 @@
     },
     saveDraft(date, draft) {
       const key = `${activeProject().id}:${date}`;
+      const photos = Array.isArray(draft.photos) ? draft.photos.slice(0, 6) : (draft.photo ? [draft.photo] : []);
       state.drafts[key] = {
         title: String(draft.title || ''),
         content: String(draft.content || ''),
         mood: draft.mood || 'calm',
         tags: Array.isArray(draft.tags) ? draft.tags : [],
         goals: draft.goals && typeof draft.goals === 'object' ? draft.goals : {},
-        photo: draft.photo || null,
+        photo: photos[0] || null,
+        photos,
         updatedAt: new Date().toISOString()
       };
       schedulePersist({ emit: false, reason: 'draft', delay: 350 });

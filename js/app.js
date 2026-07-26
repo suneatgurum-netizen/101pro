@@ -9,7 +9,7 @@
   let currentView = 'home';
   let editorDate = '';
   let selectedMood = 'calm';
-  let editorPhoto = null;
+  let editorPhotos = [];
   let pinBuffer = '';
   let memorySearch = '';
   let installPrompt = null;
@@ -325,21 +325,28 @@
     return `<div class="entry-list">${entries.map(([date, entry]) => {
       const day = store.dayNumber(date, project);
       const tags = (entry.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
-      const photo = entry.photo?.dataUrl ? `<img class="entry-thumb" src="${entry.photo.dataUrl}" alt="">` : '';
+      const photosList = Array.isArray(entry.photos) && entry.photos.length
+        ? entry.photos
+        : (entry.photo?.dataUrl ? [entry.photo] : []);
+      const mainPhoto = photosList[0]?.dataUrl ? `<img class="entry-thumb" src="${photosList[0].dataUrl}" alt="">` : '';
+      const galleryHtml = photosList.length > 1
+        ? `<div class="entry-photo-gallery">${photosList.map((p, i) => `<img src="${p.dataUrl}" alt="인증 ${i + 1}">`).join('')}</div>`
+        : '';
       const goalBadges = (project.goals || [])
         .filter((g) => entry.goals && entry.goals[g.id] !== undefined && entry.goals[g.id] > 0)
         .map((g) => `<span class="entry-goal-badge">🎯 ${escapeHtml(g.name)} ${Number(entry.goals[g.id]).toLocaleString()}${escapeHtml(g.unit)}</span>`)
         .join('');
 
-      return `<button class="card entry-item ${photo ? 'has-photo' : ''}" data-date="${date}">
+      return `<button class="card entry-item ${mainPhoto ? 'has-photo' : ''}" data-date="${date}">
         <div class="entry-day">${day}</div>
         <div class="entry-copy">
           <h3>${moodMap[entry.mood]?.icon || '😌'} ${escapeHtml(entry.title || formatKoreanDate(date))}</h3>
           <p>${escapeHtml(entry.content)}</p>
           ${goalBadges ? `<div class="entry-goals-row">${goalBadges}</div>` : ''}
+          ${galleryHtml}
           ${tags ? `<div class="tag-row">${tags}</div>` : ''}
         </div>
-        ${photo}<span class="chevron">›</span>
+        ${mainPhoto}<span class="chevron">›</span>
       </button>`;
     }).join('')}</div>`;
   }
@@ -396,6 +403,28 @@
         </div>
       `;
 
+    const photosGridHtml = editorPhotos.length
+      ? `<div class="photo-grid-editor">
+          ${editorPhotos.map((p, idx) => `
+            <div class="photo-item-editor">
+              <img src="${p.dataUrl}" alt="인증 ${idx + 1}">
+              <span class="photo-badge">인증 ${idx + 1}</span>
+              <button type="button" class="photo-item-remove" data-action="remove-photo-at" data-index="${idx}" aria-label="사진 삭제">×</button>
+            </div>
+          `).join('')}
+          ${editorPhotos.length < 6 ? `
+            <label class="photo-upload-box">
+              <span>＋ 사진 추가</span>
+              <small>(${editorPhotos.length}/6)</small>
+              <input id="entry-photo-input" type="file" accept="image/*" multiple hidden>
+            </label>
+          ` : ''}
+         </div>`
+      : `<label class="btn btn-secondary btn-block file-btn">
+          📷 목표 인증 사진 추가하기 (최대 6장)
+          <input id="entry-photo-input" type="file" accept="image/*" multiple hidden>
+         </label>`;
+
     views.editor.innerHTML = `
       <div class="section-title first"><div><p class="eyebrow accent-text">DAY ${day}</p><h2>${formatKoreanDate(editorDate)}</h2></div><button class="text-btn" data-action="close-editor">닫기</button></div>
       ${draft ? '<div class="notice success" style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>작성 중이던 내용을 자동으로 복구했습니다.</span><button type="button" class="text-btn" data-action="discard-draft" style="min-height:auto; padding:0; text-decoration:underline;">임시 내용 버리기</button></div>' : ''}
@@ -407,9 +436,13 @@
         ${goalsFieldsHtml}
         <div class="field"><label for="entry-content">오늘의 기록</label><textarea id="entry-content" name="content" maxlength="30000" placeholder="서두르지 말고 오늘의 마음을 기록해보세요.">${escapeHtml(source.content || '')}</textarea><div class="field-foot"><span id="autosave-status">자동 저장 준비됨</span><span id="content-count">${String(source.content || '').length.toLocaleString()}자</span></div></div>
         <div class="field"><label for="entry-tags">태그</label><input id="entry-tags" name="tags" maxlength="160" placeholder="예: 가족, 산책, 감사" value="${escapeHtml(tags)}"><small>쉼표로 구분하며 최대 10개까지 저장됩니다.</small></div>
-        <div class="field"><label>사진 한 장</label>
-          ${editorPhoto?.dataUrl ? `<div class="photo-preview"><img src="${editorPhoto.dataUrl}" alt="일기 사진 미리보기"><button type="button" class="photo-remove" data-action="remove-photo">사진 삭제</button></div>` : '<div class="photo-empty">사진은 휴대폰 안에 압축 저장되며 서버로 전송되지 않습니다.</div>'}
-          <label class="btn btn-secondary btn-block file-btn">${editorPhoto ? '사진 바꾸기' : '사진 추가하기'}<input id="entry-photo-input" type="file" accept="image/*" hidden></label>
+        <div class="field">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="margin:0;">목표 인증 사진 (최대 6장)</label>
+            <span style="font-size:0.78rem; color:var(--muted);">${editorPhotos.length}/6 장 선택됨</span>
+          </div>
+          ${photosGridHtml}
+          <small style="color:var(--muted); font-size:0.76rem;">사진은 휴대폰 안에만 압축 저장되며 외부 서버로 전송되지 않습니다.</small>
         </div>
         <div class="actions"><button class="btn btn-primary" type="submit">기록 저장</button>${entry ? '<button class="btn btn-danger" type="button" data-action="delete-entry">삭제</button>' : ''}</div>
       </form>
@@ -548,14 +581,17 @@
     editorDate = date;
     const draft = store.getDraft(date);
     const entry = store.getProject().entries[date];
-    selectedMood = draft?.mood || entry?.mood || 'calm';
-    editorPhoto = draft?.photo || entry?.photo || null;
+    const source = draft || entry || {};
+    selectedMood = source.mood || 'calm';
+    editorPhotos = Array.isArray(source.photos) && source.photos.length
+      ? [...source.photos]
+      : (source.photo?.dataUrl ? [source.photo] : []);
     navigate('editor');
   }
 
   function closeEditor() {
     const draft = store.getDraft(editorDate);
-    if (draft && (draft.title.trim() || draft.content.trim() || draft.photo)) {
+    if (draft && (draft.title.trim() || draft.content.trim() || (draft.photos && draft.photos.length) || draft.photo)) {
       showToast('작성 중인 내용은 자동 저장되었습니다.');
     }
     navigate('calendar');
@@ -612,10 +648,13 @@
       showToast('임시 저장을 삭제하고 원래 일기로 복원했습니다.');
       renderEditor();
     }
-    if (action === 'remove-photo') {
-      editorPhoto = null;
-      saveEditorDraft();
-      renderEditor();
+    if (action === 'remove-photo-at') {
+      const idx = Number(actionTarget.dataset.index);
+      if (!isNaN(idx) && editorPhotos[idx]) {
+        editorPhotos.splice(idx, 1);
+        saveEditorDraft();
+        renderEditor();
+      }
     }
     if (action === 'delete-entry' && confirm('이 기록을 삭제할까요? 삭제 전 자동 복구 지점이 만들어집니다.')) {
       store.deleteEntry(editorDate);
@@ -697,7 +736,8 @@
         mood: selectedMood,
         tags,
         goals: goalsData,
-        photo: editorPhoto
+        photo: editorPhotos[0] || null,
+        photos: editorPhotos
       });
       await store.flush();
       showToast('오늘의 기록을 휴대폰에 저장했습니다.');
@@ -754,7 +794,7 @@
         goalsData[g.id] = Number(input.value);
       }
     });
-    store.saveDraft(editorDate, { title: title.value, content: content.value, mood: selectedMood, tags, goals: goalsData, photo: editorPhoto });
+    store.saveDraft(editorDate, { title: title.value, content: content.value, mood: selectedMood, tags, goals: goalsData, photo: editorPhotos[0] || null, photos: editorPhotos });
     const status = document.getElementById('autosave-status');
     if (status) {
       status.textContent = '휴대폰에 임시 저장됨';
@@ -766,25 +806,37 @@
   }
 
   async function addPhoto(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 선택할 수 있습니다.');
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    if (editorPhotos.length >= 6) {
+      alert('목표 인증 사진은 최대 6장까지 첨부할 수 있습니다.');
+      event.target.value = '';
       return;
     }
-    if (file.size > 25 * 1024 * 1024) {
-      alert('사진 원본은 25MB 이하만 사용할 수 있습니다.');
-      return;
+
+    const availableSlots = 6 - editorPhotos.length;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots) {
+      showToast(`최대 6장까지 저장 가능하여 ${availableSlots}장의 사진만 추가되었습니다.`, 3000);
+    } else {
+      showToast('사진을 휴대폰 저장용으로 압축하고 있습니다…', 3000);
     }
-    showToast('사진을 휴대폰 저장용으로 압축하고 있습니다…', 3000);
+
     try {
-      editorPhoto = await compressImage(file, 1440, 0.8);
+      for (const file of filesToProcess) {
+        if (!file.type.startsWith('image/')) continue;
+        if (file.size > 25 * 1024 * 1024) continue;
+        const compressed = await compressImage(file, 1440, 0.8);
+        editorPhotos.push(compressed);
+      }
       saveEditorDraft();
       renderEditor();
-      showToast('사진을 압축해 임시 저장했습니다.');
+      showToast(`${filesToProcess.length}장의 사진을 추가해 임시 저장했습니다.`);
     } catch (error) {
       console.error(error);
-      alert('이 사진 형식을 읽지 못했습니다. JPG 또는 PNG 사진을 사용해 주세요.');
+      alert('사진을 읽지 못했습니다. JPG 또는 PNG 사진을 사용해 주세요.');
     } finally {
       event.target.value = '';
     }
