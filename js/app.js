@@ -3,7 +3,7 @@
 
   const store = window.CentumStore;
   const prompts = window.DIARY_PROMPTS || [];
-  const APP_VERSION = window.CENTUM_VERSION || '3.0.2';
+  const APP_VERSION = window.CENTUM_VERSION || '3.0.3';
   const views = {};
 
   let currentView = 'home';
@@ -1185,6 +1185,13 @@
       return;
     }
     try {
+      const res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const remoteInfo = await res.json();
+        if (remoteInfo?.version && remoteInfo.version !== APP_VERSION) {
+          if (showResult) showToast(`새 버전(v${remoteInfo.version})이 서버에서 확인되었습니다. 업데이트를 준비합니다…`, 3000);
+        }
+      }
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
         if (showResult) showToast('앱 설치 정보를 찾지 못했습니다. 페이지를 다시 열어주세요.');
@@ -1192,7 +1199,7 @@
       }
       await registration.update();
       if (registration.waiting) showUpdateBanner(registration.waiting);
-      else if (showResult) showToast('현재 최신 버전입니다.');
+      else if (showResult) showToast(`현재 최신 버전(v${APP_VERSION})이 적용되어 있습니다.`);
     } catch (error) {
       if (showResult) showToast(navigator.onLine ? '업데이트 확인에 실패했습니다.' : '오프라인에서는 업데이트를 확인할 수 없습니다.');
     }
