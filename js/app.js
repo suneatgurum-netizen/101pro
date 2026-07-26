@@ -1216,7 +1216,8 @@
     if (barFillEl) barFillEl.style.width = `${validDay}%`;
 
     if (imgEl) {
-      imgEl.src = `assets/growth-cells/cell-${validDay}.jpg`;
+      const fileName = String(validDay).padStart(3, '0') + '.png';
+      imgEl.src = `navi_img/${fileName}`;
       imgEl.onerror = () => {
         imgEl.src = 'assets/growth-grid.png';
       };
