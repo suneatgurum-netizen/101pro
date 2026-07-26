@@ -15,7 +15,9 @@ const APP_SHELL = [
   './assets/icon-512.png',
   './assets/icon-maskable-192.png',
   './assets/icon-maskable-512.png',
-  './assets/apple-touch-icon.png'
+  './assets/apple-touch-icon.png',
+  './assets/growth-bg.png',
+  './assets/growth-grid.png'
 ];
 
 self.addEventListener('install', (event) => {

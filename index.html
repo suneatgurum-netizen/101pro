@@ -105,6 +105,36 @@
         </form>
       </div>
     </div>
+
+    <!-- 100일 성장 조각 축하 모달 -->
+    <div id="growth-modal" class="modal-overlay growth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="growth-modal-title">
+      <div class="modal-content growth-modal-content">
+        <button type="button" class="modal-close-icon growth-close-btn" data-action="close-growth-modal" aria-label="닫기">×</button>
+        <div class="growth-card-bg">
+          <div class="growth-header">
+            <span class="growth-day-badge" id="growth-modal-day-badge">DAY 01</span>
+            <h2 id="growth-modal-title" class="growth-title">성장의 순간이 기록되었습니다</h2>
+          </div>
+          <div class="growth-frame-wrapper">
+            <div class="growth-frame-sparkle"></div>
+            <div class="growth-frame">
+              <img id="growth-modal-img" src="assets/growth-cells/cell-1.jpg" alt="성장 조각">
+              <span id="growth-modal-cell-num" class="growth-cell-num">01</span>
+            </div>
+          </div>
+          <div class="growth-body">
+            <p id="growth-modal-quote" class="growth-quote">“소중한 알에서 시작된 오늘의 마음, 나비가 될 날을 향해 걸어갑니다.”</p>
+            <div class="growth-progress-wrap">
+              <div class="growth-progress-label"><span>100일 완주 여정</span><strong id="growth-modal-percent">1%</strong></div>
+              <div class="growth-progress-bar"><span id="growth-modal-bar-fill" style="width: 1%"></span></div>
+            </div>
+          </div>
+          <div class="growth-actions">
+            <button type="button" class="btn btn-primary btn-block" data-action="close-growth-modal">오늘의 기록 확인하기</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>window.CENTUM_VERSION = '3.0.0';</script>

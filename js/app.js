@@ -588,6 +588,7 @@
 
     if (action === 'fix-goals') openGoalsModal();
     if (action === 'close-goals-modal') closeGoalsModal();
+    if (action === 'close-growth-modal') closeGrowthModal();
     if (action === 'add-goal-field') addGoalField();
     if (action === 'remove-goal-field') {
       const idx = Number(actionTarget.dataset.index);
@@ -679,15 +680,18 @@
     if (event.target.id === 'entry-form') {
       event.preventDefault();
       const data = new FormData(event.target);
+      const savedDate = data.get('date');
+      const project = store.getProject();
+      const dayNum = store.dayNumber(savedDate, project);
       const tags = String(data.get('tags') || '').split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 10);
       const goalsData = {};
-      (store.getProject().goals || []).forEach((g) => {
+      (project.goals || []).forEach((g) => {
         const val = data.get(`goal_${g.id}`);
         if (val !== null && val !== '' && !isNaN(Number(val))) {
           goalsData[g.id] = Number(val);
         }
       });
-      store.saveEntry(data.get('date'), {
+      store.saveEntry(savedDate, {
         title: data.get('title'),
         content: data.get('content'),
         mood: selectedMood,
@@ -698,6 +702,7 @@
       await store.flush();
       showToast('오늘의 기록을 휴대폰에 저장했습니다.');
       navigate('home');
+      openGrowthModal(dayNum, savedDate);
     }
     if (event.target.id === 'goals-form') {
       event.preventDefault();
@@ -1190,6 +1195,55 @@
     }
 
     if (addBtn) addBtn.style.display = activeGoalsDraft.length >= 6 ? 'none' : 'block';
+  }
+
+  function openGrowthModal(dayNumber, dateString) {
+    const validDay = clamp(Number(dayNumber) || 1, 1, 100);
+    const modal = document.getElementById('growth-modal');
+    if (!modal) return;
+
+    const dayBadge = document.getElementById('growth-modal-day-badge');
+    const titleEl = document.getElementById('growth-modal-title');
+    const imgEl = document.getElementById('growth-modal-img');
+    const cellNumEl = document.getElementById('growth-modal-cell-num');
+    const quoteEl = document.getElementById('growth-modal-quote');
+    const percentEl = document.getElementById('growth-modal-percent');
+    const barFillEl = document.getElementById('growth-modal-bar-fill');
+
+    if (dayBadge) dayBadge.textContent = `DAY ${String(validDay).padStart(2, '0')}`;
+    if (cellNumEl) cellNumEl.textContent = String(validDay).padStart(2, '0');
+    if (percentEl) percentEl.textContent = `${validDay}%`;
+    if (barFillEl) barFillEl.style.width = `${validDay}%`;
+
+    if (imgEl) {
+      imgEl.src = `assets/growth-cells/cell-${validDay}.jpg`;
+      imgEl.onerror = () => {
+        imgEl.src = 'assets/growth-grid.png';
+      };
+    }
+
+    if (titleEl) {
+      if (validDay === 100) titleEl.textContent = '🏅 100일 여정의 대완주를 축하합니다!';
+      else titleEl.textContent = `${validDay}일차 성장의 순간이 기록되었습니다`;
+    }
+
+    if (quoteEl) {
+      let quote = '소중한 마음이 모여 아름다운 나비로 자라납니다.';
+      if (validDay <= 10) quote = '소중한 알에서 시작된 오늘의 마음, 큰 꿈으로 깨어납니다.';
+      else if (validDay <= 30) quote = '잎사귀 위에서 자라나는 작은 꿈, 오늘도 한 발짝 단단해집니다.';
+      else if (validDay <= 50) quote = '바람을 견디며 세상으로 나아갈 힘을 든든하게 축적하고 있습니다.';
+      else if (validDay <= 80) quote = '고요함 속에서 찬란한 날개를 준비하는 당신의 소중한 시간입니다.';
+      else if (validDay < 100) quote = '마침내 피어날 날갯짓, 숲 전체를 빛나게 만들 준비가 되었습니다.';
+      else quote = '100일의 빛나는 여정을 완성했습니다! 세상에서 가장 아름다운 나비로 날아오릅니다.';
+      quoteEl.textContent = `“${quote}”`;
+    }
+
+    modal.classList.add('open');
+  }
+
+  function closeGrowthModal() {
+    const modal = document.getElementById('growth-modal');
+    if (modal) modal.classList.remove('open');
   }
 
   function showToast(message, duration = 2200) {

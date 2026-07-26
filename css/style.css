@@ -420,3 +420,200 @@ body.privacy-cover .privacy-shield { display: grid; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* --- 100일 성장 조각 축하 모달 디자인 --- */
+.growth-modal-overlay { z-index: 350; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); }
+.growth-modal-content {
+  position: relative;
+  width: 90%;
+  max-width: 390px;
+  padding: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: growthPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes growthPopIn {
+  from { opacity: 0; transform: scale(0.82) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.growth-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+}
+
+.growth-card-bg {
+  position: relative;
+  background: url('../assets/growth-bg.png') center/cover no-repeat;
+  padding: 24px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: #ffffff;
+}
+
+.growth-card-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 35, 20, 0.45) 0%, rgba(10, 20, 10, 0.75) 100%);
+  z-index: 1;
+}
+
+.growth-header, .growth-frame-wrapper, .growth-body, .growth-actions {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.growth-day-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  background: rgba(255, 215, 0, 0.9);
+  color: #2c1a00;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border-radius: 99px;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+  margin-bottom: 8px;
+}
+
+.growth-title {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  margin-bottom: 16px;
+}
+
+.growth-frame-wrapper {
+  position: relative;
+  margin: 8px 0 16px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.growth-frame-sparkle {
+  position: absolute;
+  inset: -12px;
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(255,223,128,0.4) 0%, rgba(255,255,255,0) 70%);
+  animation: sparklePulse 2.5s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes sparklePulse {
+  0%, 100% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 0.95; }
+}
+
+.growth-frame {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), inset 0 0 0 3px rgba(255, 223, 128, 0.7);
+  border: 4px solid #4a3424;
+  background: #111;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.growth-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.growth-cell-num {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffdf80;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 223, 128, 0.5);
+}
+
+.growth-body {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 16px;
+}
+
+.growth-quote {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #f0f7ed;
+  font-weight: 500;
+  margin-bottom: 12px;
+  word-break: keep-all;
+}
+
+.growth-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.growth-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.growth-progress-bar {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.growth-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffdf80 0%, #4caf50 100%);
+  border-radius: 99px;
+  transition: width 0.5s ease-out;
+}
+
+.growth-actions button {
+  background: linear-gradient(135deg, #4d7c0f 0%, #3f6212 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.growth-actions button:active {
+  transform: scale(0.98);
+}
