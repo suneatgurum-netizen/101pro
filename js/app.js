@@ -95,7 +95,7 @@
   }
 
   function resolveInitialView() {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'write') {
       setTimeout(() => openEditor(store.today()), 0);
       return 'home';
